@@ -2,18 +2,20 @@ import fastavro as avro
 from fastavro.six import json_dump
 from sys import stdout
 import subprocess
+import pprint
 
 encoding = stdout.encoding or "UTF-8"
 
-def pipe_to_underscore(records, indent, args):
+def pipe_to_underscore(records, indent, underscore):
     import json
-    import sys
-    # TODO: does this break in python 3?
     records_json = json.dumps(records)
+
     underscore_args = ["underscore", "-d", records_json]
-    underscore_args.extend(args.file[1:])
+    underscore_args.extend(underscore)
     p = subprocess.Popen(underscore_args, stdout=subprocess.PIPE)
-    sys.stdout.write(str(p.communicate()))
+
+    pp = pprint.PrettyPrinter(indent=4)
+    pp.pprint(eval(p.communicate()[0]))
 
 def main(argv=None):
     import sys
@@ -23,7 +25,8 @@ def main(argv=None):
 
     parser = ArgumentParser(
         description='iter over avro file, emit records as JSON')
-    parser.add_argument('file', help='file(s) to parse', nargs='*')
+    parser.add_argument('underscore', help='underscore arguments', nargs='*')
+    parser.add_argument('-d', '--data', help='file(s) to parse')
     parser.add_argument('--schema', help='dump schema instead of records',
                         action='store_true', default=False)
     parser.add_argument('--codecs', help='print supported codecs',
@@ -39,7 +42,7 @@ def main(argv=None):
         print('\n'.join(sorted(fastavro._reader.BLOCK_READERS)))
         raise SystemExit
 
-    filename = args.file[0] 
+    filename = args.data 
     try:
         fo = open(filename, 'rb')
     except IOError as e:
@@ -60,7 +63,7 @@ def main(argv=None):
         all_records = []
         for record in reader:
             all_records.append(record)
-        pipe_to_underscore(all_records, indent, args)
+        pipe_to_underscore(all_records, indent, args.underscore)
     except (IOError, KeyboardInterrupt):
         pass
 
