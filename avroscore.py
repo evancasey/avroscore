@@ -7,13 +7,13 @@ encoding = stdout.encoding or "UTF-8"
 
 def pipe_to_underscore(records, indent, args):
     import json
+    import sys
     # TODO: does this break in python 3?
     records_json = json.dumps(records)
     underscore_args = ["underscore", "-d", records_json]
     underscore_args.extend(args.file[1:])
     p = subprocess.Popen(underscore_args, stdout=subprocess.PIPE)
-    print p.communicate()
-    print
+    sys.stdout.write(str(p.communicate()))
 
 def main(argv=None):
     import sys
