@@ -4,18 +4,35 @@ from sys import stdout
 import subprocess
 import pprint
 
+import transform
+
 encoding = stdout.encoding or "UTF-8"
 
-def pipe_to_underscore(records, indent, underscore):
-    import json
-    records_json = json.dumps(records)
-
-    underscore_args = ["underscore", "-d", records_json]
-    underscore_args.extend(underscore)
-    p = subprocess.Popen(underscore_args, stdout=subprocess.PIPE)
+def apply_transformation(records, indent, underscore_args):
+    while len(underscore_args) > 0:
+        if underscore_args[0] == '|':
+            underscore_args.pop(0)
+            continue
+        if underscore_args[0] == 'pluck':
+            # TODO: handle error case where next arg is '|'
+            res = transform.pluck(records, underscore_args[1])
+            underscore_args.pop(0)
+            underscore_args.pop(0)
+            records = res
+            continue
+        elif underscore_args[0] == 'size':
+            res = transform.size(records)
+            underscore_args.pop(0)
+            records = res
+            continue
+        elif underscore_args[0] == 'first':
+            res = transform.first(records)
+            underscore_args.pop(0)
+            records = res
+            continue
 
     pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(eval(p.communicate()[0]))
+    pp.pprint(records)
 
 def main(argv=None):
     import sys
@@ -63,7 +80,7 @@ def main(argv=None):
         all_records = []
         for record in reader:
             all_records.append(record)
-        pipe_to_underscore(all_records, indent, args.underscore)
+        apply_transformation(all_records, indent, args.underscore)
     except (IOError, KeyboardInterrupt):
         pass
 
